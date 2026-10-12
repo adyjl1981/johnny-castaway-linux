@@ -20,7 +20,7 @@ case "$ID" in
   *) echo "No CI package list for $ID" >&2; exit 1 ;;
 esac
 /usr/bin/python3 -m unittest discover -s tests -v
-/usr/bin/python3 -m compileall -q johnny_castaway install.py launcher.py
+/usr/bin/python3 -m compileall -q johnny_castaway install.py launcher.py setup.py
 sh -n install.sh uninstall.sh
 pkg-config --exists alsa wayland-client xkbcommon x11
 /usr/bin/python3 install.py --print-deps

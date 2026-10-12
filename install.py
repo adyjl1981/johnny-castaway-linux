@@ -89,7 +89,7 @@ def quoted(value, percent=False):
     return '"' + value + '"'
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, epilog="For guided setup, run ./install.sh with no arguments or use ./install.sh --setup.")
     data = parser.add_mutually_exclusive_group()
     data.add_argument('--data', type=Path, help='Original RESOURCE files folder or scrantic-run.zip')
     data.add_argument('--fetch-data', action='store_true', help='Download verified Internet Archive data for personal use; use only if entitled to a copy')
@@ -180,7 +180,9 @@ def main():
             shutil.copytree(ROOT / name, app / name, dirs_exist_ok=True,
                             ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         shutil.copyfile(ROOT / 'launcher.py', app / 'launcher.py')
-        shutil.copyfile(binary, app / 'wilson')
+        target_binary = app / 'wilson'
+        if not target_binary.exists() or not os.path.samefile(binary, target_binary):
+            shutil.copyfile(binary, target_binary)
         (app / 'wilson').chmod(0o755)
         if (app / 'data').exists():
             shutil.rmtree(app / 'data')

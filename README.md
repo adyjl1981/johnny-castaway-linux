@@ -6,6 +6,27 @@ Johnny's original island animations, with a settings window and optional idle pl
 
 The animation engine is [Wilson Reborn](https://github.com/antigerme/wilson-reborn). You provide the original game data; it is not included in this repository.
 
+## Quick setup (recommended)
+
+1. [Download the project ZIP](https://github.com/adyjl1981/johnny-castaway-linux/archive/refs/heads/main.zip) and extract it. Git is not needed to download the project this way.
+2. Open a terminal in the extracted folder and run:
+
+```sh
+sh install.sh
+```
+
+The guided setup handles the steps for you:
+
+- Choose your original game data, reuse an existing installation's data, or explicitly choose the verified personal-use Internet Archive copy.
+- Check what's missing and offer to install the required distro packages and a compatible Rust build toolchain. You approve the plan first; system packages may require your administrator password and your package manager's transaction confirmation.
+- Build/install the engine and control panel, then enable idle playback where supported. A working existing engine can be reused, avoiding the build entirely.
+
+Run setup as your normal desktop user, **without sudo**. It requests administrator privileges only for system packages. Rust is installed for your account; existing Rust defaults and shell profiles are left alone. Your screen-lock settings are preserved.
+
+Compilation can take several minutes. Build details are saved to `setup.log` in the extracted project folder if anything fails. Guided setup requires an interactive terminal and Python 3 (normally included with desktop distros). On a minimal system without Python, install `python3` (`python` on Arch) once first. Package automation covers Debian/Ubuntu/Mint, Fedora, Arch/Manjaro and openSUSE; other distros can use the advanced instructions below.
+
+Already cloned the repo? Just run `./install.sh` or `./install.sh --setup`. Existing command-line flags still work for scripted/manual installations.
+
 ## What works where?
 
 Distro and desktop are separate choices: Fedora GNOME has the same idle interface as Ubuntu GNOME; Ubuntu KDE Wayland has different capabilities.
@@ -25,7 +46,7 @@ Automatic mode is enabled only after **both an idle counter and a running suppor
 
 Desktop interfaces can vary by version and configuration. The table describes implemented behavior, not a claim that every full desktop combination has been tested. See the validation section below.
 
-## Install
+## Advanced installation
 
 Run from your desktop session, **without sudo**. Python 3.9+ is required. Clone this project:
 
@@ -40,7 +61,7 @@ Print the dependency command for your distro:
 ./install.sh --print-deps
 ```
 
-Install the prerequisites using your package manager, then install a current stable Rust toolchain using [Rust's official instructions](https://rust-lang.org/tools/install). The pinned Linux build requires Rust and Cargo **1.85.0 or newer**. Both normal installation and `--check` verify their versions before downloading data or building, and explain how to update an old toolchain. `--binary` skips the Rust checks. The installer prints commands but **does not run sudo or install system packages**.
+Install the prerequisites using your package manager, then install a current stable Rust toolchain using [Rust's official instructions](https://rust-lang.org/tools/install). The pinned Linux build requires Rust and Cargo **1.85.0 or newer**. Both normal installation and `--check` verify their versions before downloading data or building, and explain how to update an old toolchain. `--binary` skips the Rust checks. Advanced installation with flags prints dependency guidance and does not install system packages. Guided setup can install packages after your explicit confirmation.
 
 | Family | Dependency command |
 | --- | --- |

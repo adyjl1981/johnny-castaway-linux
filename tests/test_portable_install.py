@@ -27,5 +27,12 @@ class PortableInstallTests(unittest.TestCase):
             played = subprocess.run(['/usr/bin/python3','-S',
                 str(root/'share/johnny-castaway/launcher.py'),'--play'], env=env)
             self.assertEqual(played.returncode, 0)
+            # Guided upgrades reuse both engine and data from the installed directory.
+            upgraded = subprocess.run(['/usr/bin/python3','-S',str(ROOT/'install.py'),
+                '--no-gui','--binary',str(root/'share/johnny-castaway/wilson'),
+                '--data',str(root/'share/johnny-castaway/data')], env=env,
+                capture_output=True, text=True)
+            self.assertEqual(upgraded.returncode, 0, upgraded.stdout+upgraded.stderr)
+            self.assertEqual((root/'share/johnny-castaway/data/RESOURCE.001').read_bytes(), b'synthetic data')
 
 if __name__ == '__main__': unittest.main()
