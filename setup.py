@@ -136,7 +136,7 @@ def prepare_rust():
                 raise RuntimeError('Unexpectedly large Rust installer download; setup stopped.')
             script.write_bytes(contents)
             run_quiet(['sh', str(script), '-y', '--profile', 'minimal', '--no-modify-path',
-                       '--default-toolchain', 'stable'], 'Preparing the build toolchain…')
+                       '--no-update-default-toolchain', '--default-toolchain', 'stable'], 'Preparing the build toolchain…')
     # Select stable for this setup and its build only; do not change the user's default/overrides.
     os.environ['RUSTUP_TOOLCHAIN'] = 'stable'
     if not rust_available():

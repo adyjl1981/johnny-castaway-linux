@@ -78,6 +78,17 @@ class SetupTests(unittest.TestCase):
             setup.main()
             self.assertEqual(packages.call_args.args[0][:2],['sudo','apt'])
             rust.assert_called_once();run.assert_called_once()
+    def test_fresh_rust_setup_preserves_existing_profiles_and_defaults(self):
+        with patch.dict(os.environ, {}, clear=False), \
+             patch('setup.shutil.which', return_value=None), \
+             patch('setup.urllib.request.urlopen') as response, \
+             patch('setup.run_quiet') as run, patch('setup.rust_available', return_value=True):
+            response.return_value.__enter__.return_value.read.return_value = b'# test installer'
+            setup.prepare_rust()
+            args = run.call_args.args[0]
+            self.assertIn('--no-modify-path', args)
+            self.assertIn('--no-update-default-toolchain', args)
+
     def test_rust_update_does_not_change_the_users_default_toolchain(self):
         with patch.dict(os.environ, {}, clear=False), \
              patch('setup.shutil.which',return_value='/bin/rustup'), \
