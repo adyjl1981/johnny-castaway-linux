@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+build/
+data/
+wilson
+*.zip
+*.log

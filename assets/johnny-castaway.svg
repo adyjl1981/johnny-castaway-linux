@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<title>Johnny's island</title>
+<rect x="8" y="8" width="240" height="240" rx="52" fill="#163e57"/>
+<circle cx="193" cy="66" r="24" fill="#ffdb7c"/>
+<path d="M8 155Q65 140 128 155T248 155V196H8Z" fill="#258eaa"/>
+<path d="M35 183Q128 115 221 183Q128 221 35 183" fill="#eac27b"/>
+<path d="M124 173Q146 130 132 77" fill="none" stroke="#94613d" stroke-width="15" stroke-linecap="round"/>
+<path d="M133 82Q91 43 60 91Q95 76 133 82M133 82Q123 27 166 37Q146 57 133 82M133 82Q174 45 206 91Q173 76 133 82M133 82Q160 99 170 125Q140 110 133 82M133 82Q99 92 82 121Q87 85 133 82" fill="#67b65c" stroke="#67b65c" stroke-width="5" stroke-linejoin="round"/>
+<ellipse cx="85" cy="175" rx="14" ry="5" fill="#c39b60"/>
+<circle cx="84" cy="146" r="9" fill="#f1c39d"/>
+<path d="M79 156L77 169H92L89 156" fill="#f7eee2"/>
+<path d="M79 169L75 177M89 169L94 176" stroke="#444e63" stroke-width="5" stroke-linecap="round"/>
+</svg>
