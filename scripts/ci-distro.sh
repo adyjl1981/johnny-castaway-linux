@@ -15,7 +15,7 @@ case "$ID" in
     ;;
   opensuse-tumbleweed|opensuse-leap)
     zypper --non-interactive refresh
-    zypper --non-interactive install --no-recommends git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0 xorg-x11-server-Xvfb dbus-1 dbus-1-tools xauth curl ca-certificates
+    zypper --non-interactive install --no-recommends git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0 xorg-x11-server-Xvfb dbus-1 dbus-1-daemon dbus-1-tools xauth curl ca-certificates
     ;;
   *) echo "No CI package list for $ID" >&2; exit 1 ;;
 esac
