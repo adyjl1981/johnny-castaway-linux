@@ -21,7 +21,7 @@ jobs:
             image: opensuse/tumbleweed:latest
     name: ${{ matrix.name }} — build and desktop checks
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Check dependencies, GUI fallback, X11 idle, and engine build
         run: |
           docker run --rm -e BUILD_ENGINE=1 -v "$GITHUB_WORKSPACE:/src:ro" "${{ matrix.image }}" /bin/sh -c 'mkdir -p /tmp/project; cp -R /src/. /tmp/project/; cd /tmp/project; ./scripts/ci-distro.sh'

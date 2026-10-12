@@ -8,14 +8,14 @@ case "$ID" in
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git build-essential pkg-config libasound2-dev libwayland-dev libxkbcommon-dev libx11-dev libxss1 python3-gi gir1.2-gtk-4.0 xvfb dbus-x11 xauth curl ca-certificates
     ;;
   fedora)
-    dnf install -y --setopt=install_weak_deps=False git gcc pkgconf-pkg-config alsa-lib-devel wayland-devel libxkbcommon-devel libX11-devel libXScrnSaver python3-gobject gtk4 xorg-x11-server-Xvfb dbus-daemon xauth curl-minimal ca-certificates
+    dnf install -y --setopt=install_weak_deps=False git gcc pkgconf-pkg-config alsa-lib-devel wayland-devel libxkbcommon-devel libX11-devel libXScrnSaver python3-gobject gobject-introspection gtk4 libglvnd-gles xorg-x11-server-Xvfb dbus-daemon xauth curl-minimal ca-certificates
     ;;
   arch)
     pacman -Syu --noconfirm --needed git base-devel pkgconf alsa-lib wayland libxkbcommon libx11 libxss python-gobject gtk4 xorg-server-xvfb dbus xorg-xauth curl ca-certificates
     ;;
   opensuse-tumbleweed|opensuse-leap)
     zypper --non-interactive refresh
-    zypper --non-interactive install --no-recommends git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0 xorg-x11-server-Xvfb dbus-1 xauth curl ca-certificates
+    zypper --non-interactive install --no-recommends git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0 xorg-x11-server-Xvfb dbus-1 dbus-1-tools xauth curl ca-certificates
     ;;
   *) echo "No CI package list for $ID" >&2; exit 1 ;;
 esac
