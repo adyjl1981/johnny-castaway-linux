@@ -6,7 +6,7 @@ PACKAGES = {
     'debian': 'sudo apt install git build-essential pkg-config libasound2-dev libwayland-dev libxkbcommon-dev libx11-dev libxss1 python3-gi gir1.2-gtk-4.0',
     'fedora': 'sudo dnf install git gcc pkgconf-pkg-config alsa-lib-devel wayland-devel libxkbcommon-devel libX11-devel libXScrnSaver python3-gobject gobject-introspection gtk4 libglvnd-gles',
     'arch': 'sudo pacman -S --needed git base-devel pkgconf alsa-lib wayland libxkbcommon libx11 libxss python-gobject gtk4',
-    'suse': 'sudo zypper install git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0',
+    'suse': 'sudo zypper install git gcc pkgconf-pkg-config alsa-devel wayland-devel libxkbcommon-devel libX11-devel libXss1 python3-gobject python3-gobject-Gdk typelib-1_0-Gtk-4_0 dejavu-fonts',
 }
 
 def read_release(path=Path('/etc/os-release')):
