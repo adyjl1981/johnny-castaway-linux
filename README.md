@@ -30,8 +30,8 @@ Desktop interfaces can vary by version and configuration. The table describes im
 Run from your desktop session, **without sudo**. Python 3.9+ is required. Clone this project:
 
 ```sh
-git clone https://github.com/adyjl1981/johnny-castaway-ubuntu.git
-cd johnny-castaway-ubuntu
+git clone https://github.com/adyjl1981/johnny-castaway-linux.git
+cd johnny-castaway-linux
 ```
 
 Print the dependency command for your distro:
@@ -153,7 +153,7 @@ Run `./uninstall.sh` to remove idle activation and the menu shortcut. It preserv
 /usr/bin/python3 -m compileall -q johnny_castaway install.py launcher.py
 ```
 
-[Linux compatibility CI](https://github.com/adyjl1981/johnny-castaway-ubuntu/actions) checks Ubuntu 24.04, Debian stable, Fedora, Arch and openSUSE Tumbleweed containers. Each job installs the documented libraries, runs the wrapper tests, opens the GTK fallback window under Xvfb, queries a real X11 idle counter, and builds/runs the pinned engine. Ubuntu checks the minimum Rust 1.85.0 toolchain; the other jobs use current stable Rust. No copyrighted data is used in CI.
+[Linux compatibility CI](https://github.com/adyjl1981/johnny-castaway-linux/actions) checks Ubuntu 24.04, Debian stable, Fedora, Arch and openSUSE Tumbleweed containers. Each job installs the documented libraries, runs the wrapper tests, opens the GTK fallback window under Xvfb, queries a real X11 idle counter, and builds/runs the pinned engine. Ubuntu checks the minimum Rust 1.85.0 toolchain; the other jobs use current stable Rust. No copyrighted data is used in CI.
 
 Live Ubuntu 26.04.1 / GNOME 50.1 / Wayland testing verified original animation frames, all 23 sounds, audio cues, automatic activation, GUI settings and manual playback. The upstream engine/data tests passed (123 tests, one ignored). Wrapper tests cover desktop selection, lock precedence, activity exit, safe failure, XWayland rejection, native/manual fallbacks, distro detection and safe archive extraction.
 
