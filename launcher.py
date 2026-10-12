@@ -2,7 +2,7 @@
 """Settings, idle integration, diagnostics, or dependency-light manual playback."""
 import os
 import sys
-from johnny_castaway.common import command
+from johnny_castaway.common import command, load_settings, prepare_engine_config
 
 def main():
     args = sys.argv[1:]
@@ -10,9 +10,12 @@ def main():
         allowed = {'--play', '--mute', '--windowed'}
         if set(args) - allowed:
             raise SystemExit('Manual options: --play [--mute] [--windowed]')
-        cmd = command('--mute' in args)
+        settings = load_settings()
+        settings['muted'] = '--mute' in args
         if '--windowed' in args:
-            cmd.append('--windowed')
+            settings['windowed'] = True
+        prepare_engine_config(settings)
+        cmd = command(settings['muted'], settings)
         os.execv(cmd[0], cmd)
     elif args and args[0] == 'idle':
         sys.argv.pop(1)

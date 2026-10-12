@@ -5,13 +5,14 @@ import signal
 import subprocess
 import time
 from .desktop import Monitor
-from .common import APP, command, load_settings
+from .common import APP, command, load_settings, prepare_engine_config
 
 class Playback:
-    def __init__(self, launch=subprocess.Popen):
+    def __init__(self, launch=subprocess.Popen, prepare=prepare_engine_config):
         self.child = None
         self.armed = True
         self.launch = launch
+        self.prepare = prepare
 
     def stop(self):
         if self.child is not None:
@@ -24,12 +25,15 @@ class Playback:
                     self.child.wait()
             self.child = None
 
-    def update(self, locked, idle_ms, threshold_ms, muted):
+    def update(self, locked, idle_ms, threshold_ms, muted, settings=None):
         if locked or idle_ms < threshold_ms:
             self.stop()
             self.armed = True
         elif self.armed and self.child is None:
-            self.child = self.launch(command(muted), cwd=APP)
+            options = dict(load_settings() if settings is None else settings)
+            options['muted'] = muted
+            self.prepare(options)
+            self.child = self.launch(command(muted, options), cwd=APP)
             self.armed = False
             logging.info('Started idle playback')
         if self.child is not None and self.child.poll() is not None:
@@ -71,7 +75,7 @@ def main():
                 settings = load_settings()
                 threshold = args.seconds if args.seconds is not None else settings['minutes'] * 60
                 locked, idle = monitor.status()
-                playback.update(locked, idle, threshold * 1000, settings['muted'])
+                playback.update(locked, idle, threshold * 1000, settings['muted'], settings)
             except Exception as exc:
                 playback.unavailable()
                 logging.error('Checks failed; playback stopped: %s', exc)

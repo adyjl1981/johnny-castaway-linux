@@ -4,8 +4,14 @@ import threading
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, GLib
-from .common import APP, SERVICE, command, load_settings, save_settings
+from .common import APP, SERVICE, command, load_settings, save_settings, prepare_engine_config
 from .desktop import detect, user_service_available
+
+SCALE_OPTIONS = [('fit', 'Fit to screen'), ('stretch', 'Stretch to fill'),
+                 ('integer', 'Whole pixel sizes'), ('extend', 'Extend for widescreen')]
+FILTER_OPTIONS = [('nearest', 'Retro pixels (nearest)'), ('linear', 'Smooth (linear)'),
+                  ('xbr', 'Sharp smoothing (xBR)'), ('xbrz', 'Textured smoothing (xBRZ)')]
+DAYNIGHT_OPTIONS = [('original', 'Original 8-hour cycle'), ('real24h', 'Real 24-hour clock')]
 
 class Controls(Gtk.Application):
     def __init__(self):
@@ -22,13 +28,17 @@ class Controls(Gtk.Application):
             self.get_active_window().present()
             return
         self.window = Gtk.ApplicationWindow(application=self, title='Johnny Castaway')
-        self.window.set_default_size(420, 460)
+        self.window.set_default_size(500, 720)
         self.window.connect('close-request', self.close)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                       margin_top=28, margin_bottom=28, margin_start=28, margin_end=28)
-        self.window.set_child(box)
+        layout = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.window.set_child(layout)
+        scroll = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll.set_child(box)
+        layout.append(scroll)
         image = Gtk.Image.new_from_file(str(APP / 'assets' / 'johnny-castaway.svg'))
-        image.set_pixel_size(112)
+        image.set_pixel_size(80)
         box.append(image)
         title = Gtk.Label(label='A little island. A familiar castaway.')
         title.add_css_class('title-3')
@@ -49,6 +59,32 @@ class Controls(Gtk.Application):
         self.muted = Gtk.CheckButton(label='Mute sound')
         self.muted.set_active(settings['muted'])
         box.append(self.muted)
+        box.append(Gtk.Separator())
+        heading = Gtk.Label(label='Picture and animation', xalign=0)
+        heading.add_css_class('title-4')
+        box.append(heading)
+        self.windowed = Gtk.CheckButton(label='Play in a window instead of fullscreen')
+        self.windowed.set_active(settings['windowed'])
+        box.append(self.windowed)
+        self.speed = Gtk.SpinButton.new_with_range(25, 400, 25)
+        self.speed.set_value(settings['speed'])
+        self.speed.set_tooltip_text('100% is the original animation speed; choose 25% to 400%.')
+        speed_row = Gtk.Box(spacing=12)
+        speed_row.append(Gtk.Label(label='Animation speed', hexpand=True, xalign=0))
+        speed_row.append(self.speed)
+        speed_row.append(Gtk.Label(label='%'))
+        box.append(speed_row)
+        self.scale = self.option_row(box, 'Image scaling', SCALE_OPTIONS, settings['scale'])
+        self.filter = self.option_row(box, 'Image filtering', FILTER_OPTIONS, settings['filter'])
+        self.dedither = Gtk.CheckButton(label='Smooth the sea and sky')
+        self.dedither.set_tooltip_text('Smooth the original dotted colour patterns. Off preserves the authentic look.')
+        self.dedither.set_active(settings['dedither'])
+        box.append(self.dedither)
+        self.daynight = self.option_row(box, 'Day/night cycle', DAYNIGHT_OPTIONS, settings['daynight'])
+        footer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                         margin_top=16, margin_bottom=20, margin_start=28, margin_end=28)
+        layout.append(Gtk.Separator())
+        layout.append(footer)
         buttons = Gtk.Box(spacing=12, homogeneous=True)
         self.save_button = Gtk.Button(label='Save settings')
         self.save_button.connect('clicked', self.save)
@@ -57,14 +93,31 @@ class Controls(Gtk.Application):
         self.start_button.connect('clicked', self.start)
         buttons.append(self.save_button)
         buttons.append(self.start_button)
-        box.append(buttons)
-        box.append(Gtk.Label(label='Press a key or click to leave the animation.\nYour desktop’s lock screen always takes precedence.', wrap=True))
+        footer.append(buttons)
+        footer.append(Gtk.Label(label='Press a key or click to leave the animation.\nYour desktop’s lock screen always takes precedence.', wrap=True))
         reason = self.monitor.reason or ('Automatic playback needs a systemd user session.' if not self.services else '')
         self.mode_text = 'Ready — ' + self.monitor.name if self.automatic else reason + ' Use Start now.'
         self.message = Gtk.Label(label=self.mode_text, wrap=True, xalign=0)
         self.message.add_css_class('dim-label')
-        box.append(self.message)
+        footer.append(self.message)
         self.window.present()
+
+    def option_row(self, box, label, choices, value):
+        row = Gtk.Box(spacing=12)
+        row.append(Gtk.Label(label=label, xalign=0, hexpand=True))
+        widget = Gtk.DropDown.new_from_strings([title for key, title in choices])
+        widget.set_selected([key for key, title in choices].index(value))
+        row.append(widget)
+        box.append(row)
+        return widget
+
+    def playback_settings(self):
+        return {'minutes': self.minutes.get_value_as_int(), 'muted': self.muted.get_active(),
+                'windowed': self.windowed.get_active(), 'speed': self.speed.get_value_as_int(),
+                'scale': SCALE_OPTIONS[self.scale.get_selected()][0],
+                'filter': FILTER_OPTIONS[self.filter.get_selected()][0],
+                'dedither': self.dedither.get_active(),
+                'daynight': DAYNIGHT_OPTIONS[self.daynight.get_selected()][0]}
 
     def is_enabled(self):
         if not self.automatic:
@@ -100,19 +153,19 @@ class Controls(Gtk.Application):
         threading.Thread(target=run, daemon=True).start()
 
     def save(self, unused):
-        minutes = self.minutes.get_value_as_int()
-        muted = self.muted.get_active()
+        settings = self.playback_settings()
         enabled = self.enabled.get_active()
         def task():
-            save_settings(minutes, muted)
+            save_settings(settings['minutes'], settings['muted'], settings)
             if self.services:
                 self.action('enable' if enabled and self.automatic else 'disable', '--now')
-        self.worker(task, 'Saved. Idle playback ' + ('enabled.' if enabled else 'disabled.'))
+        self.worker(task, 'Saved for the next playback. Idle activation ' + ('enabled.' if enabled else 'disabled.'))
 
     def start(self, unused):
         if self.child is not None:
             return
-        muted = self.muted.get_active()
+        settings = self.playback_settings()
+        muted = settings['muted']
         def task():
             if self.monitor.locked():
                 raise RuntimeError('Unlock your desktop first.')
@@ -121,7 +174,8 @@ class Controls(Gtk.Application):
             if self.services:
                 self.action('stop')
             try:
-                self.child = subprocess.Popen(command(muted), cwd=APP)
+                prepare_engine_config(settings)
+                self.child = subprocess.Popen(command(muted, settings), cwd=APP)
             except Exception:
                 if self.restore_idle:
                     self.action('start')

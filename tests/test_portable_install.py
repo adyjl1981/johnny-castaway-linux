@@ -15,7 +15,7 @@ class PortableInstallTests(unittest.TestCase):
             binary = root/'engine'; binary.write_text('#!/bin/sh\nexit 0\n'); binary.chmod(0o755)
             env = os.environ.copy()
             env.update(HOME=str(root/'home'), XDG_CONFIG_HOME=str(root/'config'),
-                       XDG_DATA_HOME=str(root/'share'), PATH='/nonexistent',
+                       XDG_DATA_HOME=str(root/'share'), XDG_STATE_HOME=str(root/'state'), PATH='/nonexistent',
                        DBUS_SESSION_BUS_ADDRESS='unix:path=/nonexistent')
             result = subprocess.run(['/usr/bin/python3','-S',str(ROOT/'install.py'),
                 '--no-gui','--binary',str(binary),'--data',str(data)],

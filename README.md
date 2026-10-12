@@ -106,7 +106,18 @@ A headless machine needs a graphical display to show the animation. There is no 
 
 Open **Johnny Castaway** from your application menu. Choose an idle delay from 1 to 240 minutes, select sound, and use **Save settings**. Default idle playback starts after five minutes, muted. Add `--no-enable` during installation to keep automatic playback disabled.
 
-**Start now** uses the current sound checkbox. Where idle playback is running, it pauses that service and restores it when manual playback ends. Press a key or click to leave the animation. The no-GUI launcher offers the same manual fullscreen playback without GTK or D-Bus.
+The GUI also exposes the engine's picture and animation options:
+
+| Control | Choices |
+| --- | --- |
+| Windowed playback | Window or fullscreen |
+| Animation speed | 25–400%, with 100% matching the original |
+| Image scaling | Fit, stretch, whole pixel sizes (integer), or widescreen extension |
+| Image filtering | Nearest, linear, xBR, or xBRZ |
+| Sea/sky smoothing | On or off (off preserves original dithering) |
+| Day/night | Original 8-hour cycle or real 24-hour clock |
+
+**Save settings** persists these options for manual and automatic playback. Changes take effect on the next launch. **Start now** previews the current controls without requiring a save. Where idle playback is running, it pauses that service and restores it when manual playback ends. Press a key or click to leave the animation. The no-GUI launcher offers the same manual fullscreen playback without GTK or D-Bus.
 
 Diagnostics:
 
@@ -132,7 +143,9 @@ Standard paths (XDG overrides are respected):
 | Application, engine and local game data | `~/.local/share/johnny-castaway/` |
 | Settings | `~/.config/johnny-castaway/settings.json` |
 | Optional idle service | `~/.config/systemd/user/johnny-castaway-idle.service` |
-| Engine story progress | `~/.local/state/wilson-reborn/` |
+| Engine configuration and story progress | `~/.local/state/wilson-reborn/` |
+
+Before each launch, the integration synchronizes its managed options to the engine configuration, including turning booleans off; unrelated intro, story and other engine settings are preserved. Existing delay/mute settings migrate automatically to the expanded settings format.
 
 Moving or deleting the checkout after installation does not affect playback. Reinstalling replaces the app/data and preserves your saved delay and sound preference. Installing on a session without idle support disables automatic activation; it can be enabled from the GUI later in a supported session.
 

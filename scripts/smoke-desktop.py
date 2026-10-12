@@ -21,21 +21,34 @@ errors = []
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)
     common.CONFIG = root/'settings.json'
+    common.ENGINE_CONFIG = root/'engine-config.txt'
     engine = root/'wilson'
     engine.write_text('#!/bin/sh\nexec sleep 30\n')
     engine.chmod(0o755)
     original_command = gui.command
-    gui.command = lambda muted=False: [str(engine)]
+    gui.command = lambda muted=False, settings=None: [str(engine)]
     app = Controls()
     app.register(None)
     app.activate()
     loop = GLib.MainLoop()
     assert not app.automatic, 'No supported locker exists in this isolated Xvfb session'
     assert not app.enabled.get_sensitive()
+    app.speed.set_value(275)
+    app.scale.set_selected(3)
+    app.filter.set_selected(2)
+    app.windowed.set_active(True)
+    app.dedither.set_active(True)
+    app.daynight.set_selected(1)
+    expected = app.playback_settings()
+    assert expected['scale'] == 'extend' and expected['filter'] == 'xbr'
+    assert expected['daynight'] == 'real24h' and expected['speed'] == 275
     def check():
         if app.busy:
             return True
         try:
+            assert common.load_settings() == expected
+            assert 'windowed=true' in common.ENGINE_CONFIG.read_text()
+            assert 'speed=275' in common.ENGINE_CONFIG.read_text()
             assert app.child is not None and app.child.poll() is None, app.message.get_text()
             # An unavailable idle interface must not kill manually started playback.
             app.check_playback()
@@ -48,8 +61,14 @@ with tempfile.TemporaryDirectory() as temporary:
             app.close(None)
         loop.quit()
         return False
-    app.start(None)
-    GLib.timeout_add(1000, check)
+    def begin_playback():
+        if app.busy:
+            return True
+        app.start(None)
+        GLib.timeout_add(1000, check)
+        return False
+    app.save(None)
+    GLib.timeout_add(100, begin_playback)
     def timeout():
         errors.append('GUI smoke timed out')
         app.close(None)

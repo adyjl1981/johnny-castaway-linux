@@ -17,7 +17,7 @@ class IdleTests(unittest.TestCase):
             child = Child()
             self.children.append(child)
             return child
-        self.player = Playback(launch)
+        self.player = Playback(launch, prepare=lambda options: None)
     def test_activity_closes_and_rearms(self):
         self.player.update(False, 300000, 300000, True)
         self.player.update(False, 0, 300000, True)
