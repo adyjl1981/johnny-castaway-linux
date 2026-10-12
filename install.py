@@ -10,6 +10,7 @@ import tempfile
 import urllib.request
 import zipfile
 import sys
+import re
 from johnny_castaway.distro import guidance, read_release
 from johnny_castaway.common import user_service_available
 
@@ -19,9 +20,40 @@ REVISION = '2d302f56580cdcfd7a94c095e77f6bfd19f129bd'
 DATA_URL = 'https://archive.org/download/johnny-castaway-screensaver/scrantic-run.zip'
 DATA_SHA256 = '111c384aa44fc810c0453f524d8c02dee58ea3358ee788316b2fc1f2059afc56'
 NAMES = ('RESOURCE.MAP', 'RESOURCE.001', 'SCRANTIC.EXE', 'SCRANTIC.SCR')
+# Highest declared MSRV in this pinned Linux normal/build graph: hashbrown/indexmap.
+MIN_RUST = (1, 85, 0)
 
 def run(*args, **kwargs):
     subprocess.run(args, check=True, **kwargs)
+
+def check_rust_toolchain():
+    minimum = '.'.join(map(str, MIN_RUST))
+    update = ('Update with `rustup update stable` if you use rustup, or install a current '
+              'stable toolchain: https://rust-lang.org/tools/install')
+    for tool in ('rustc', 'cargo'):
+        try:
+            output = subprocess.check_output([tool, '--version'], text=True,
+                                             stderr=subprocess.STDOUT, timeout=10).strip()
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError(f'Cannot run {tool}. Rust {minimum} or newer is required.\n{update}') from exc
+        match = re.match(rf'{tool} (\d+)\.(\d+)\.(\d+)(-[^\s]+)?(?:\s|$)', output)
+        if not match:
+            raise RuntimeError(f'Cannot determine {tool} version from {output!r}.\n{update}')
+        version = tuple(map(int, match.group(1, 2, 3)))
+        if version < MIN_RUST or (version == MIN_RUST and match.group(4)):
+            raise RuntimeError(f'Rust {minimum} or newer is required; found {output}.\n{update}')
+        print(f'Toolchain: {output}')
+
+
+def check_build_prerequisites():
+    missing = [tool for tool in ('git', 'cargo', 'rustc', 'cc', 'pkg-config')
+               if shutil.which(tool) is None]
+    if missing:
+        raise RuntimeError('Missing: ' + ', '.join(missing) + '\n' + guidance())
+    check_rust_toolchain()
+    if subprocess.run(['pkg-config', '--exists', 'alsa', 'wayland-client', 'xkbcommon', 'x11']).returncode:
+        raise RuntimeError('Build libraries missing.\n' + guidance())
+
 
 def copy_data(source, destination):
     """Copy only recognized data entries; never extract archive paths."""
@@ -91,15 +123,13 @@ def main():
             print('Desktop:', monitor.name, monitor.reason)
             monitor.close()
         if not args.binary:
-            missing = [name for name in ('git', 'cargo', 'cc', 'pkg-config') if shutil.which(name) is None]
-            if missing:
-                raise SystemExit('Missing: ' + ', '.join(missing) + '\n' + guidance())
-            if subprocess.run(['pkg-config', '--exists', 'alsa', 'wayland-client', 'xkbcommon', 'x11']).returncode:
-                raise SystemExit('Build libraries missing.\n' + guidance())
+            check_build_prerequisites()
         print('Prerequisite check passed. Manual playback can install even without automatic idle support.')
         return
     if not args.data and not args.fetch_data:
         parser.error('provide --data or --fetch-data (or use --check / --print-deps)')
+    if not args.binary:
+        check_build_prerequisites()
     if monitor:
         print('Desktop:', monitor.name, '— automatic idle available' if automatic else '— manual mode')
         if monitor.reason:
@@ -123,10 +153,6 @@ def main():
             if not binary.is_file() or not os.access(binary, os.X_OK):
                 raise ValueError('Binary must be an executable file')
         else:
-            for tool in ('git', 'cargo', 'cc', 'pkg-config'):
-                if shutil.which(tool) is None:
-                    raise RuntimeError('Missing ' + tool + '\n' + guidance())
-            run('pkg-config', '--exists', 'alsa', 'wayland-client', 'xkbcommon', 'x11')
             build = ROOT / 'build' / 'wilson-reborn'
             if not build.exists():
                 build.parent.mkdir(parents=True, exist_ok=True)

@@ -37,8 +37,9 @@ done
 dbus-run-session /usr/bin/python3 scripts/smoke-desktop.py
 if [ "${BUILD_ENGINE:-0}" = 1 ]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/johnny-rustup.sh
-    sh /tmp/johnny-rustup.sh -y --profile minimal
+    sh /tmp/johnny-rustup.sh -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN:-stable}"
     export PATH="$HOME/.cargo/bin:$PATH"
+    /usr/bin/python3 install.py --check --no-gui
     git clone https://github.com/antigerme/wilson-reborn.git /tmp/wilson-reborn
     git -C /tmp/wilson-reborn checkout --detach 2d302f56580cdcfd7a94c095e77f6bfd19f129bd
     cargo build --manifest-path /tmp/wilson-reborn/Cargo.toml --release --locked -p wilson

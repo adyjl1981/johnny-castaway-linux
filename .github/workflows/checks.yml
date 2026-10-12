@@ -11,6 +11,7 @@ jobs:
         include:
           - name: Ubuntu
             image: ubuntu:24.04
+            rust: 1.85.0
           - name: Debian
             image: debian:stable
           - name: Fedora
@@ -24,4 +25,4 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - name: Check dependencies, GUI fallback, X11 idle, and engine build
         run: |
-          docker run --rm -e BUILD_ENGINE=1 -v "$GITHUB_WORKSPACE:/src:ro" "${{ matrix.image }}" /bin/sh -c 'mkdir -p /tmp/project; cp -R /src/. /tmp/project/; cd /tmp/project; ./scripts/ci-distro.sh'
+          docker run --rm -e BUILD_ENGINE=1 -e RUST_TOOLCHAIN="${{ matrix.rust || 'stable' }}" -v "$GITHUB_WORKSPACE:/src:ro" "${{ matrix.image }}" /bin/sh -c 'mkdir -p /tmp/project; cp -R /src/. /tmp/project/; cd /tmp/project; ./scripts/ci-distro.sh'

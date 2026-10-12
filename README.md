@@ -40,7 +40,7 @@ Print the dependency command for your distro:
 ./install.sh --print-deps
 ```
 
-Install the prerequisites using your package manager, then install a current stable Rust toolchain using [Rust's official instructions](https://rust-lang.org/tools/install). Older distro Rust versions may not build the pinned engine dependencies. The installer prints commands but **does not run sudo or install system packages**.
+Install the prerequisites using your package manager, then install a current stable Rust toolchain using [Rust's official instructions](https://rust-lang.org/tools/install). The pinned Linux build requires Rust and Cargo **1.85.0 or newer**. Both normal installation and `--check` verify their versions before downloading data or building, and explain how to update an old toolchain. `--binary` skips the Rust checks. The installer prints commands but **does not run sudo or install system packages**.
 
 | Family | Dependency command |
 | --- | --- |
@@ -153,7 +153,7 @@ Run `./uninstall.sh` to remove idle activation and the menu shortcut. It preserv
 /usr/bin/python3 -m compileall -q johnny_castaway install.py launcher.py
 ```
 
-[Linux compatibility CI](https://github.com/adyjl1981/johnny-castaway-ubuntu/actions) checks Ubuntu 24.04, Debian stable, Fedora, Arch and openSUSE Tumbleweed containers. Each job installs the documented libraries, runs the wrapper tests, opens the GTK fallback window under Xvfb, queries a real X11 idle counter, and builds/runs the pinned engine with current stable Rust. No copyrighted data is used in CI.
+[Linux compatibility CI](https://github.com/adyjl1981/johnny-castaway-ubuntu/actions) checks Ubuntu 24.04, Debian stable, Fedora, Arch and openSUSE Tumbleweed containers. Each job installs the documented libraries, runs the wrapper tests, opens the GTK fallback window under Xvfb, queries a real X11 idle counter, and builds/runs the pinned engine. Ubuntu checks the minimum Rust 1.85.0 toolchain; the other jobs use current stable Rust. No copyrighted data is used in CI.
 
 Live Ubuntu 26.04.1 / GNOME 50.1 / Wayland testing verified original animation frames, all 23 sounds, audio cues, automatic activation, GUI settings and manual playback. The upstream engine/data tests passed (123 tests, one ignored). Wrapper tests cover desktop selection, lock precedence, activity exit, safe failure, XWayland rejection, native/manual fallbacks, distro detection and safe archive extraction.
 
