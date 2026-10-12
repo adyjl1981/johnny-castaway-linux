@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 
 APP = Path(__file__).resolve().parent.parent
 CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'johnny-castaway' / 'settings.json'
@@ -37,3 +38,13 @@ def command(muted=False):
 def service(action):
     return subprocess.run(['systemctl', '--user', action, SERVICE], check=True,
                           capture_output=True, text=True)
+
+
+def user_service_available():
+    if not shutil.which('systemctl'):
+        return False
+    try:
+        return subprocess.run(['systemctl', '--user', 'show-environment'],
+            capture_output=True, timeout=5).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False

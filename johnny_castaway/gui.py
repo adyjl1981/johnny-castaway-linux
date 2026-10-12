@@ -5,7 +5,7 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, GLib
 from .common import APP, SERVICE, command, load_settings, save_settings
-from .idle import Monitor
+from .desktop import detect, user_service_available
 
 class Controls(Gtk.Application):
     def __init__(self):
@@ -13,6 +13,9 @@ class Controls(Gtk.Application):
         self.child = None
         self.restore_idle = False
         self.busy = False
+        self.monitor = detect()
+        self.services = user_service_available()
+        self.automatic = self.monitor.supported and self.services
 
     def do_activate(self):
         if self.get_active_window():
@@ -32,12 +35,14 @@ class Controls(Gtk.Application):
         box.append(title)
         settings = load_settings()
         self.enabled = Gtk.CheckButton(label='Start automatically when I’m idle')
-        self.enabled.set_active(self.is_enabled())
+        self.enabled.set_active(self.automatic and self.is_enabled())
+        self.enabled.set_sensitive(self.automatic)
         box.append(self.enabled)
         row = Gtk.Box(spacing=12)
         row.append(Gtk.Label(label='Start after', hexpand=True, xalign=0))
         self.minutes = Gtk.SpinButton.new_with_range(1, 240, 1)
         self.minutes.set_value(settings['minutes'])
+        self.minutes.set_sensitive(self.automatic)
         row.append(self.minutes)
         row.append(Gtk.Label(label='minutes'))
         box.append(row)
@@ -53,17 +58,23 @@ class Controls(Gtk.Application):
         buttons.append(self.save_button)
         buttons.append(self.start_button)
         box.append(buttons)
-        box.append(Gtk.Label(label='Press a key or click to leave the animation.\nGNOME’s lock screen always takes precedence.', wrap=True))
-        self.message = Gtk.Label(label='Ready', wrap=True, xalign=0)
+        box.append(Gtk.Label(label='Press a key or click to leave the animation.\nYour desktop’s lock screen always takes precedence.', wrap=True))
+        reason = self.monitor.reason or ('Automatic playback needs a systemd user session.' if not self.services else '')
+        self.mode_text = 'Ready — ' + self.monitor.name if self.automatic else reason + ' Use Start now.'
+        self.message = Gtk.Label(label=self.mode_text, wrap=True, xalign=0)
         self.message.add_css_class('dim-label')
         box.append(self.message)
         self.window.present()
 
     def is_enabled(self):
+        if not self.automatic:
+            return False
         return subprocess.run(['systemctl', '--user', 'is-enabled', SERVICE],
                               capture_output=True).returncode == 0
 
     def action(self, *args):
+        if not self.services:
+            return
         subprocess.run(['systemctl', '--user', *args, SERVICE], check=True,
                        capture_output=True, text=True)
 
@@ -94,7 +105,8 @@ class Controls(Gtk.Application):
         enabled = self.enabled.get_active()
         def task():
             save_settings(minutes, muted)
-            self.action('enable' if enabled else 'disable', '--now')
+            if self.services:
+                self.action('enable' if enabled and self.automatic else 'disable', '--now')
         self.worker(task, 'Saved. Idle playback ' + ('enabled.' if enabled else 'disabled.'))
 
     def start(self, unused):
@@ -102,12 +114,12 @@ class Controls(Gtk.Application):
             return
         muted = self.muted.get_active()
         def task():
-            monitor = Monitor()
-            if monitor.status()[0]:
+            if self.monitor.locked():
                 raise RuntimeError('Unlock your desktop first.')
-            self.restore_idle = subprocess.run(['systemctl', '--user', 'is-active', SERVICE],
+            self.restore_idle = self.services and subprocess.run(['systemctl', '--user', 'is-active', SERVICE],
                                                capture_output=True).returncode == 0
-            self.action('stop')
+            if self.services:
+                self.action('stop')
             try:
                 self.child = subprocess.Popen(command(muted), cwd=APP)
             except Exception:
@@ -122,7 +134,7 @@ class Controls(Gtk.Application):
         if self.child is None:
             return False
         try:
-            locked = Monitor().status()[0]
+            locked = self.monitor.locked()
         except Exception:
             locked = True
         if locked and self.child.poll() is None:
@@ -135,7 +147,7 @@ class Controls(Gtk.Application):
         if restore:
             self.worker(lambda: self.action('start'), 'Ready. Idle playback resumed.')
         else:
-            self.message.set_text('Ready')
+            self.message.set_text(self.mode_text)
             self.save_button.set_sensitive(True)
             self.start_button.set_sensitive(True)
         return False
@@ -157,6 +169,7 @@ class Controls(Gtk.Application):
                 self.action('start')
             except Exception:
                 pass
+        self.monitor.close()
         return False
 
 def main():

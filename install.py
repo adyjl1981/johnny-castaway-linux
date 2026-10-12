@@ -9,6 +9,9 @@ import subprocess
 import tempfile
 import urllib.request
 import zipfile
+import sys
+from johnny_castaway.distro import guidance, read_release
+from johnny_castaway.common import user_service_available
 
 ROOT = Path(__file__).resolve().parent
 UPSTREAM = 'https://github.com/antigerme/wilson-reborn.git'
@@ -55,15 +58,53 @@ def quoted(value, percent=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    data = parser.add_mutually_exclusive_group(required=True)
+    data = parser.add_mutually_exclusive_group()
     data.add_argument('--data', type=Path, help='Original RESOURCE files folder or scrantic-run.zip')
     data.add_argument('--fetch-data', action='store_true', help='Download verified Internet Archive data for personal use; use only if entitled to a copy')
     parser.add_argument('--binary', type=Path, help='Use an existing trusted Wilson Reborn binary instead of building')
     parser.add_argument('--no-enable', action='store_true', help='Install without starting automatic idle playback')
+    parser.add_argument('--no-gui', action='store_true', help='Install manual playback without GTK or idle integration')
+    parser.add_argument('--print-deps', action='store_true', help='Print dependency instructions for this distro')
+    parser.add_argument('--check', action='store_true', help='Check prerequisites and desktop capabilities without installing')
     args = parser.parse_args()
-    import gi
-    gi.require_version('Gtk', '4.0')
-    from gi.repository import Gtk  # confirm GUI dependency before changes
+    if args.print_deps:
+        print(guidance())
+        return
+    services = user_service_available()
+    automatic = False
+    monitor = None
+    if not args.no_gui:
+        try:
+            import gi
+            gi.require_version('Gtk', '4.0')
+            from gi.repository import Gtk
+        except (ImportError, ValueError) as exc:
+            raise SystemExit('GTK 4/PyGObject is missing. Install prerequisites:\n' + guidance() + '\nOr use --no-gui for manual playback.') from exc
+        from johnny_castaway.desktop import detect
+        monitor = detect()
+        automatic = monitor.supported and services
+    if args.check:
+        print('Distribution:', read_release().get('PRETTY_NAME', 'Unknown Linux'))
+        print('GUI:', not args.no_gui)
+        print('Automatic idle:', automatic)
+        if monitor:
+            print('Desktop:', monitor.name, monitor.reason)
+            monitor.close()
+        if not args.binary:
+            missing = [name for name in ('git', 'cargo', 'cc', 'pkg-config') if shutil.which(name) is None]
+            if missing:
+                raise SystemExit('Missing: ' + ', '.join(missing) + '\n' + guidance())
+            if subprocess.run(['pkg-config', '--exists', 'alsa', 'wayland-client', 'xkbcommon', 'x11']).returncode:
+                raise SystemExit('Build libraries missing.\n' + guidance())
+        print('Prerequisite check passed. Manual playback can install even without automatic idle support.')
+        return
+    if not args.data and not args.fetch_data:
+        parser.error('provide --data or --fetch-data (or use --check / --print-deps)')
+    if monitor:
+        print('Desktop:', monitor.name, '— automatic idle available' if automatic else '— manual mode')
+        if monitor.reason:
+            print(monitor.reason)
+        monitor.close()
     share = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')).resolve()
     config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')).resolve()
     app = share / 'johnny-castaway'
@@ -84,7 +125,7 @@ def main():
         else:
             for tool in ('git', 'cargo', 'cc', 'pkg-config'):
                 if shutil.which(tool) is None:
-                    raise RuntimeError('Missing ' + tool + '; see README prerequisites')
+                    raise RuntimeError('Missing ' + tool + '\n' + guidance())
             run('pkg-config', '--exists', 'alsa', 'wayland-client', 'xkbcommon', 'x11')
             build = ROOT / 'build' / 'wilson-reborn'
             if not build.exists():
@@ -103,9 +144,12 @@ def main():
                 raise ValueError('Upstream revision mismatch')
             run('cargo', 'build', '--release', '--locked', '-p', 'wilson', cwd=build)
             binary = build / 'target/release/wilson'
+        # Confirm the engine can load its runtime libraries before replacing anything.
+        run(str(binary), '--help', stdout=subprocess.DEVNULL)
         # Everything needed is staged before stopping/replacing the existing install.
         app.mkdir(parents=True, exist_ok=True)
-        subprocess.run(['systemctl', '--user', 'stop', 'johnny-castaway-idle.service'], capture_output=True)
+        if services:
+            subprocess.run(['systemctl', '--user', 'stop', 'johnny-castaway-idle.service'], capture_output=True)
         for name in ('johnny_castaway', 'assets'):
             shutil.copytree(ROOT / name, app / name, dirs_exist_ok=True,
                             ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
@@ -120,7 +164,7 @@ def main():
         (desktop_dir / 'Johnny-Castaway.desktop').write_text(
             '[Desktop Entry]\nType=Application\nName=Johnny Castaway\n'
             'Comment=Settings and original Johnny Castaway animation\n'
-            f'Exec=/usr/bin/python3 {quoted(app / "launcher.py", True)}\n'
+            f'Exec={quoted(sys.executable, True)} {quoted(app / "launcher.py", True)}{" --play" if args.no_gui else ""}\n'
             f'Icon={app / "assets/johnny-castaway.svg"}\nTerminal=false\nCategories=Game;\n')
         units = config / 'systemd/user'
         units.mkdir(parents=True, exist_ok=True)
@@ -128,15 +172,21 @@ def main():
             '[Unit]\nDescription=Johnny Castaway idle animation\n'
             'After=graphical-session.target\nPartOf=graphical-session.target\n\n'
             '[Service]\nType=simple\n'
-            f'ExecStart=/usr/bin/python3 {quoted(app / "launcher.py", True)} idle\n'
+            f'ExecStart={quoted(sys.executable, True)} {quoted(app / "launcher.py", True)} idle\n'
             'Restart=on-failure\nRestartSec=10\n\n'
             '[Install]\nWantedBy=graphical-session.target\n')
-    run('systemctl', '--user', 'daemon-reload')
-    if args.no_enable:
-        run('systemctl', '--user', 'disable', '--now', 'johnny-castaway-idle.service')
-    else:
-        run('systemctl', '--user', 'enable', '--now', 'johnny-castaway-idle.service')
+    if services:
+        run('systemctl', '--user', 'daemon-reload')
+        if args.no_enable or not automatic:
+            run('systemctl', '--user', 'disable', '--now', 'johnny-castaway-idle.service')
+        else:
+            run('systemctl', '--user', 'enable', '--now', 'johnny-castaway-idle.service')
+    if not automatic:
+        print('Manual playback installed. Automatic idle requires a supported desktop and systemd user session.')
     print('Installed. Open Johnny Castaway from your application menu.')
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(str(exc)) from exc

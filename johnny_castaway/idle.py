@@ -1,10 +1,10 @@
-"""GNOME idle playback which always yields to its screen shield."""
+"""Idle playback which always yields to the existing desktop locker."""
 import argparse
 import logging
 import signal
 import subprocess
 import time
-from gi.repository import Gio
+from .desktop import Monitor
 from .common import APP, command, load_settings
 
 class Playback:
@@ -40,21 +40,6 @@ class Playback:
         self.stop()
         self.armed = False  # require observed activity before retrying
 
-class Monitor:
-    def __init__(self):
-        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-
-    def call(self, dest, path, interface, method):
-        return self.bus.call_sync(dest, path, interface, method, None, None,
-                                 Gio.DBusCallFlags.NONE, 2000, None).unpack()[0]
-
-    def status(self):
-        locked = self.call('org.gnome.ScreenSaver', '/org/gnome/ScreenSaver',
-                           'org.gnome.ScreenSaver', 'GetActive')
-        idle = self.call('org.gnome.Mutter.IdleMonitor', '/org/gnome/Mutter/IdleMonitor/Core',
-                         'org.gnome.Mutter.IdleMonitor', 'GetIdletime')
-        return locked, idle
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--probe', action='store_true')
@@ -65,7 +50,13 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     monitor = Monitor()
     if args.probe:
-        print('locked=%s idle_ms=%s' % monitor.status())
+        print('backend=%s automatic=%s reason=%s' % (monitor.name, monitor.supported, monitor.reason))
+        if monitor.supported:
+            print('locked=%s idle_ms=%s' % monitor.status())
+        monitor.close()
+        return
+    if not monitor.supported:
+        logging.info('Manual mode: %s', monitor.reason)
         return
     playback = Playback()
     running = True
@@ -87,6 +78,7 @@ def main():
             time.sleep(1)
     finally:
         playback.stop()
+        monitor.close()
 
 if __name__ == '__main__':
     main()

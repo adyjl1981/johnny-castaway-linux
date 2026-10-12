@@ -1,17 +1,27 @@
-name: Checks
-on: [push, pull_request]
+name: Linux compatibility
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
-  check:
+  distro:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu
+            image: ubuntu:24.04
+          - name: Debian
+            image: debian:stable
+          - name: Fedora
+            image: fedora:latest
+          - name: Arch
+            image: archlinux:latest
+          - name: openSUSE
+            image: opensuse/tumbleweed:latest
+    name: ${{ matrix.name }} — build and desktop checks
     steps:
       - uses: actions/checkout@v4
-      - name: Install test dependencies
-        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0
-      - name: Run tests
-        run: /usr/bin/python3 -m unittest discover -s tests -v
-      - name: Check syntax
+      - name: Check dependencies, GUI fallback, X11 idle, and engine build
         run: |
-          /usr/bin/python3 -m compileall -q johnny_castaway install.py launcher.py
-          sh -n install.sh uninstall.sh
+          docker run --rm -e BUILD_ENGINE=1 -v "$GITHUB_WORKSPACE:/src:ro" "${{ matrix.image }}" /bin/sh -c 'mkdir -p /tmp/project; cp -R /src/. /tmp/project/; cd /tmp/project; ./scripts/ci-distro.sh'
